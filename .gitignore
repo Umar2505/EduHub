@@ -31,6 +31,15 @@ db.sqlite3-journal
 /media
 /staticfiles
 /static
+backend/media/
+frontend/media/
+*.mov
+*.mp4
+*.avi
+*.mkv
+*.wmv
+*.flv
+*.webm
 
 # Environment variables
 .env
