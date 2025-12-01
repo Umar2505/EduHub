@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: eduhub-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: eduhub-backend.onrender.com
+      - key: TIMEZONE
+        value: Asia/Tashkent
+    healthCheckPath: /
+    plan: starter
+
+databases:
+  - name: eduhub-db
+    plan: starter
+

@@ -14,5 +14,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Make startup script executable
+RUN chmod +x start.sh || true
+
+# Expose port (Render will set PORT env var)
+EXPOSE 8000
+
+# Use startup script that handles migrations and starts gunicorn
+CMD ["/bin/bash", "start.sh"]
 
