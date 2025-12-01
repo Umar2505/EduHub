@@ -65,40 +65,49 @@ WSGI_APPLICATION = 'eduhub.wsgi.application'
 # Database configuration - supports both DATABASE_URL and individual settings
 DATABASE_URL = os.getenv('DATABASE_URL')
 if DATABASE_URL:
-    # Parse DATABASE_URL (format: postgresql://user:password@host:port/dbname)
-    import re
-    db_match = re.match(r'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', DATABASE_URL)
-    if db_match:
+    # Parse DATABASE_URL using urllib.parse (handles special characters in passwords)
+    from urllib.parse import urlparse
+    try:
+        # Handle postgres:// and postgresql:// URLs
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        
+        parsed = urlparse(DATABASE_URL)
+        
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.postgresql',
-                'NAME': db_match.group(5),
-                'USER': db_match.group(1),
-                'PASSWORD': db_match.group(2),
-                'HOST': db_match.group(3),
-                'PORT': db_match.group(4),
+                'NAME': parsed.path[1:],  # Remove leading '/'
+                'USER': parsed.username,
+                'PASSWORD': parsed.password,
+                'HOST': parsed.hostname,
+                'PORT': parsed.port or '5432',
             }
         }
-    else:
-        # Fallback to individual settings
+    except Exception as e:
+        # If parsing fails, log error and use individual settings
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f'Failed to parse DATABASE_URL: {e}. Using individual settings.')
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.postgresql',
                 'NAME': os.getenv('DB_NAME', 'eduhub'),
                 'USER': os.getenv('DB_USER', 'postgres'),
                 'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-                'HOST': os.getenv('DB_HOST', 'db'),
+                'HOST': os.getenv('DB_HOST', 'localhost'),  # Changed default from 'db' to 'localhost'
                 'PORT': os.getenv('DB_PORT', '5432'),
             }
         }
 else:
+    # No DATABASE_URL, use individual settings (for local Docker development)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('DB_NAME', 'eduhub'),
             'USER': os.getenv('DB_USER', 'postgres'),
             'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-            'HOST': os.getenv('DB_HOST', 'db'),
+            'HOST': os.getenv('DB_HOST', 'db'),  # 'db' for Docker Compose
             'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
