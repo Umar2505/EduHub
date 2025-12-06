@@ -47,6 +47,10 @@ END
 echo "Running database migrations..."
 python manage.py migrate --noinput || echo "Migration failed, continuing anyway..."
 
+# Create superuser from environment variables (non-blocking)
+echo "Creating superuser from environment variables..."
+python manage.py createsuperuser_auto || echo "Superuser creation skipped"
+
 # Collect static files (non-blocking)
 echo "Collecting static files..."
 python manage.py collectstatic --noinput || echo "Static files collection skipped"
