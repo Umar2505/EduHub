@@ -5,21 +5,25 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y \
+# Install only essential packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy and install requirements first (for better caching)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
+# Copy application code
 COPY . .
 
 # Make startup script executable
 RUN chmod +x start.sh || true
 
-# Expose port (Render will set PORT env var)
+# Expose port
 EXPOSE 8000
 
-# Use startup script that handles migrations and starts gunicorn
+# Use startup script
 CMD ["/bin/bash", "start.sh"]
 

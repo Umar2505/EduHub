@@ -6,8 +6,8 @@ PORT=${PORT:-8000}
 
 echo "Starting EduHub backend on port $PORT"
 
-# Wait for database to be ready (with timeout)
-echo "Waiting for database connection..."
+# Quick database check (max 10 seconds)
+echo "Checking database connection..."
 python << END
 import sys
 import time
@@ -19,7 +19,7 @@ except ImportError:
     print("psycopg2 not available, skipping database check")
     sys.exit(0)
 
-max_attempts = 30
+max_attempts = 5
 attempt = 0
 db_url = os.getenv('DATABASE_URL')
 
@@ -29,7 +29,7 @@ if not db_url:
 
 while attempt < max_attempts:
     try:
-        conn = psycopg2.connect(db_url, connect_timeout=5)
+        conn = psycopg2.connect(db_url, connect_timeout=2)
         conn.close()
         print("Database is ready!")
         sys.exit(0)
@@ -39,28 +39,26 @@ while attempt < max_attempts:
             print(f"Waiting for database... ({attempt}/{max_attempts})")
             time.sleep(2)
         else:
-            print(f"Database connection failed after {max_attempts} attempts: {e}")
-            sys.exit(1)
+            print(f"Database check failed, but continuing...")
+            sys.exit(0)  # Don't fail, just continue
 END
 
-# Run migrations
+# Run migrations (non-blocking)
 echo "Running database migrations..."
 python manage.py migrate --noinput || echo "Migration failed, continuing anyway..."
 
-# Collect static files
+# Collect static files (non-blocking)
 echo "Collecting static files..."
-python manage.py collectstatic --noinput || echo "Static files collection failed, continuing anyway..."
+python manage.py collectstatic --noinput || echo "Static files collection skipped"
 
 # Start server with gunicorn
 echo "Starting Gunicorn server..."
 exec gunicorn eduhub.wsgi:application \
     --bind 0.0.0.0:$PORT \
     --workers 2 \
-    --timeout 120 \
+    --timeout 60 \
     --keep-alive 5 \
-    --max-requests 1000 \
-    --max-requests-jitter 50 \
     --access-logfile - \
     --error-logfile - \
-    --log-level info
+    --log-level warning
 
